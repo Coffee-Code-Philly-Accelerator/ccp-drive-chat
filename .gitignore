@@ -1,0 +1,10 @@
+.env
+.env.*
+!.env.example
+.venv/
+.gitnexus/
+.claude/
+.DS_Store
+__pycache__/
+.pytest_cache/
+.dispatch/

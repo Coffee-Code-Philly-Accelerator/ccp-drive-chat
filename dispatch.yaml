@@ -1,0 +1,14 @@
+namespace: default
+agent_name: ccp-drive-chat
+entrypoint: agent.py
+base_image: python:3.13-slim
+system_packages: []
+env:
+  GOOGLE_DRIVE_FOLDER_ID: ''
+  CCP_DOCS_MAX_FILES: '8'
+  LOG_LEVEL: INFO
+secrets:
+- name: GOOGLE_SERVICE_ACCOUNT_JSON
+  secret_id: /shared/google-drive-service-account-json
+llm_instrument: true
+log_level: INFO
