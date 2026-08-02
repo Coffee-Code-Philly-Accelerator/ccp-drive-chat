@@ -15,8 +15,16 @@ _GOOGLEDRIVE_TOOLKIT = "googledrive"
 _COMPOSIO_USER_ID = "default"
 _MAX_CONTEXT_CHARS = 18_000
 _DOC_CHARS = 3_000
-_SENSITIVE_NAME_RE = re.compile(r"\b(api key|credential|password|secret|token)\b", re.IGNORECASE)
+_SENSITIVE_NAME_RE = re.compile(
+    r"\b(api[- ]?key|auth|bearer|credential|credentials|creds|password|secret|token)\b",
+    re.IGNORECASE,
+)
+_SENSITIVE_TEXT_RE = re.compile(
+    r"(?im)^\s*(api[- ]?key|access token|bearer token|client secret|credential|credentials|password)\s*[:=]",
+    re.IGNORECASE,
+)
 _SECRET_VALUE_RES = [
+    re.compile(r"\bak_[A-Za-z0-9_-]{10,}\b"),
     re.compile(r"\bdak_[A-Za-z0-9_-]{20,}\b"),
     re.compile(r"\bgh[opsu]_[A-Za-z0-9_]{20,}\b"),
     re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b"),
@@ -92,6 +100,8 @@ def _fetch_docs() -> list[dict]:
         if _looks_sensitive_name(item.get("name", "")):
             continue
         text = _file_text(client, connected_account_id, item)
+        if _looks_sensitive_text(text):
+            continue
         if text:
             docs.append({
                 "name": item.get("name", "Untitled"),
@@ -227,6 +237,14 @@ def _download_url_text(url: str) -> str:
 
 def _looks_sensitive_name(name: str) -> bool:
     return bool(_SENSITIVE_NAME_RE.search(name))
+
+
+def _looks_sensitive_text(text: str) -> bool:
+    return bool(text and (_SENSITIVE_TEXT_RE.search(text) or _contains_secret_value(text)))
+
+
+def _contains_secret_value(text: str) -> bool:
+    return any(pattern.search(text) for pattern in _SECRET_VALUE_RES)
 
 
 def _redact_secret_values(text: str) -> str:

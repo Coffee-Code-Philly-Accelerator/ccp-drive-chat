@@ -70,6 +70,7 @@ class AgentTests(unittest.TestCase):
         client = object()
         files = [
             {"id": "secret-1", "name": "Datadog API key", "mimeType": "application/vnd.google-apps.document"},
+            {"id": "secret-2", "name": "SonOfAnton creds", "mimeType": "application/vnd.google-apps.document"},
             {"id": "doc-1", "name": "Handbook", "mimeType": "application/vnd.google-apps.document"},
         ]
         with (
@@ -85,7 +86,32 @@ class AgentTests(unittest.TestCase):
         ):
             docs = agent._fetch_docs()
 
-        file_text.assert_called_once_with(client, "acct-1", files[1])
+        file_text.assert_called_once_with(client, "acct-1", files[2])
+        self.assertEqual([doc["name"] for doc in docs], ["Handbook"])
+
+    def test_fetch_docs_skips_sensitive_file_content(self):
+        client = object()
+        files = [
+            {"id": "doc-1", "name": "Notes", "mimeType": "application/vnd.google-apps.document"},
+            {"id": "doc-2", "name": "Handbook", "mimeType": "application/vnd.google-apps.document"},
+        ]
+        with (
+            mock.patch.dict(
+                "os.environ",
+                {"GOOGLE_DRIVE_FOLDER_ID": "folder-123", "COMPOSIO_API_KEY": "key"},
+                clear=True,
+            ),
+            mock.patch.object(agent, "_composio_client", return_value=client),
+            mock.patch.object(agent, "_drive_connected_account_id", return_value="acct-1"),
+            mock.patch.object(agent, "_list_files", return_value=files),
+            mock.patch.object(
+                agent,
+                "_file_text",
+                side_effect=["Access token: " + ("a" * 36), "Meetups happen weekly."],
+            ),
+        ):
+            docs = agent._fetch_docs()
+
         self.assertEqual([doc["name"] for doc in docs], ["Handbook"])
 
     def test_drive_connected_account_id_uses_default_user(self):
