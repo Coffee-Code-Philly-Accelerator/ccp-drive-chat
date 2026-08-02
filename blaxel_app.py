@@ -110,6 +110,12 @@ async def ask_code_coffee_docs(payload: dict[str, Any] | AskDocsRequest) -> AskD
 
 
 class BlaxelHandler(BaseHTTPRequestHandler):
+    def do_OPTIONS(self) -> None:
+        self.send_response(204)
+        self._send_cors_headers()
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def do_GET(self) -> None:
         if self.path == "/health":
             self._send_json(200, {"ok": True})
@@ -140,9 +146,15 @@ class BlaxelHandler(BaseHTTPRequestHandler):
         data = json.dumps(payload, default=_json_default).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
+        self._send_cors_headers()
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)
+
+    def _send_cors_headers(self) -> None:
+        self.send_header("Access-Control-Allow-Origin", "https://www.codephilly.com")
+        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
     def log_message(self, format: str, *args: Any) -> None:
         logger.info(format, *args)

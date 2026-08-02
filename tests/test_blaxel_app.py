@@ -85,11 +85,41 @@ def test_http_post_root():
             )
             with urllib.request.urlopen(request, timeout=5) as response:
                 data = json.loads(response.read().decode())
+                headers = response.headers
     finally:
         server.shutdown()
         server.server_close()
         thread.join(timeout=5)
     assert data == {"answer": "hello", "citations": []}
+    assert headers["Access-Control-Allow-Origin"] == "https://www.codephilly.com"
+
+
+def test_http_options_cors_preflight():
+    server = ThreadingHTTPServer(("127.0.0.1", 0), blaxel_app.BlaxelHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    try:
+        thread.start()
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{server.server_port}/",
+            headers={
+                "Origin": "https://www.codephilly.com",
+                "Access-Control-Request-Method": "POST",
+            },
+            method="OPTIONS",
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            status = response.status
+            headers = response.headers
+            body = response.read()
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+    assert status == 204
+    assert body == b""
+    assert headers["Access-Control-Allow-Origin"] == "https://www.codephilly.com"
+    assert headers["Access-Control-Allow-Methods"] == "POST, OPTIONS"
+    assert headers["Access-Control-Allow-Headers"] == "Content-Type"
 
 
 def test_http_post_bad_request():
