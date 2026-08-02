@@ -1,7 +1,7 @@
 name = "ccp-drive-chat"
 workspace = "coffee-code-philly"
 type = "agent"
-public = false
+public = true
 models = ["sandbox-openai"]
 
 [runtime]
@@ -28,4 +28,4 @@ enabled = true
 
 [triggers.configuration]
 path = "/agents/ccp-drive-chat"
-authenticationType = "blaxel"
+authenticationType = "public"
