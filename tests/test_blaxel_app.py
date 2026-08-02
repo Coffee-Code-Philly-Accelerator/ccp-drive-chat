@@ -33,6 +33,40 @@ def test_ask_code_coffee_docs_returns_empty_docs_message():
     assert response.citations == []
 
 
+def test_model_url_defaults_to_workspace_gateway():
+    with mock.patch.dict("os.environ", {}, clear=True):
+        assert (
+            blaxel_app._model_url("sandbox-openai")
+            == "https://run.blaxel.ai/coffee-code-philly/models/sandbox-openai"
+        )
+
+
+def test_model_url_accepts_configured_url():
+    with mock.patch.dict("os.environ", {"BLAXEL_MODEL_URL": "https://example.test/model/"}):
+        assert blaxel_app._model_url("ignored") == "https://example.test/model"
+
+
+def test_model_answer_posts_to_gateway():
+    class FakeSettings:
+        headers = {"Authorization": "Bearer test"}
+
+    def fake_post_json(url, payload, headers, timeout):
+        assert url == "https://run.blaxel.ai/coffee-code-philly/models/sandbox-openai/v1/chat/completions"
+        assert payload["model"] == "gpt-4o-mini"
+        assert payload["messages"][1] == {"role": "user", "content": "when?"}
+        assert headers == FakeSettings.headers
+        assert timeout == 90
+        return {"choices": [{"message": {"content": "Meetups happen weekly."}}]}
+
+    with (
+        mock.patch.dict("os.environ", {}, clear=True),
+        mock.patch.dict("sys.modules", {"blaxel.core.common": mock.Mock(settings=FakeSettings)}),
+        mock.patch.object(blaxel_app, "_post_json", fake_post_json),
+    ):
+        answer = asyncio.run(blaxel_app._model_answer("when?", [{"name": "Handbook", "text": "weekly"}]))
+    assert answer == "Meetups happen weekly."
+
+
 def test_http_post_root():
     async def fake_ask(payload):
         return {"answer": payload["question"], "citations": []}

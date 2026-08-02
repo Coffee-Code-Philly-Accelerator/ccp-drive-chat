@@ -62,7 +62,9 @@ async def ask_code_coffee_docs(payload: AskDocsRequest) -> AskDocsResponse:
             "You answer questions about Code & Coffee Philadelphia using only "
             "the Google Drive document excerpts below. If the answer is not in "
             "the documents, say you do not know from the docs. Keep answers "
-            "concise and cite document names or URLs when useful.\n\n"
+            "concise and cite document names or URLs when useful. You may answer "
+            "questions about which documents were read using the document names "
+            "and URLs in the excerpts.\n\n"
             f"{_format_doc_context(docs)}"
         ),
     )

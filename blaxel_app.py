@@ -6,6 +6,8 @@ import logging
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
 
 from agent import AskDocsRequest, AskDocsResponse, _fetch_docs, _format_doc_context
 
@@ -30,37 +32,69 @@ def _json_default(value: Any) -> Any:
 
 
 async def _model_answer(question: str, docs: list[dict]) -> str:
-    from blaxel.core import bl_model as bl_model_core
-    from blaxel.openai.model import DynamicHeadersHTTPClient
-    from openai import AsyncOpenAI
+    from blaxel.core.common import settings
 
     model_name = os.environ.get("BLAXEL_MODEL", "sandbox-openai")
-    url, model_type, provider_model = await bl_model_core(model_name).get_parameters()
-    if model_type != "openai":
-        raise RuntimeError(f"Blaxel model {model_name!r} is not OpenAI-compatible")
+    provider_model = os.environ.get("BLAXEL_PROVIDER_MODEL", "gpt-4o-mini")
+    url = _model_url(model_name)
 
     system = (
         "You answer questions about Code & Coffee Philadelphia using only "
         "the Google Drive document excerpts below. If the answer is not in "
         "the documents, say you do not know from the docs. Keep answers "
-        "concise and cite document names or URLs when useful.\n\n"
+        "concise and cite document names or URLs when useful. You may answer "
+        "questions about which documents were read using the document names "
+        "and URLs in the excerpts.\n\n"
         f"{_format_doc_context(docs)}"
     )
 
-    async with DynamicHeadersHTTPClient(base_url=f"{url}/v1") as http_client:
-        client = AsyncOpenAI(
-            base_url=f"{url}/v1",
-            api_key="replaced",
-            http_client=http_client,
-        )
-        response = await client.chat.completions.create(
-            model=provider_model,
-            messages=[
+    response = await asyncio.to_thread(
+        _post_json,
+        f"{url}/v1/chat/completions",
+        {
+            "model": provider_model,
+            "messages": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": question},
             ],
-        )
-    return (response.choices[0].message.content or "").strip()
+        },
+        settings.headers,
+        90,
+    )
+    choices = response.get("choices") or []
+    if not choices:
+        raise RuntimeError("Blaxel model returned no choices")
+    message = choices[0].get("message") or {}
+    return str(message.get("content") or "").strip()
+
+
+def _model_url(model_name: str) -> str:
+    configured = os.environ.get("BLAXEL_MODEL_URL", "").strip()
+    if configured:
+        return configured.rstrip("/")
+    workspace = os.environ.get("BLAXEL_WORKSPACE", "coffee-code-philly")
+    return f"https://run.blaxel.ai/{workspace}/models/{model_name}"
+
+
+def _post_json(url: str, payload: dict, headers: dict[str, str], timeout: int) -> dict:
+    body = json.dumps(payload).encode()
+    request = Request(
+        url,
+        data=body,
+        method="POST",
+        headers={
+            **headers,
+            "accept": "application/json",
+            "content-type": "application/json",
+        },
+    )
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            response_body = response.read()
+    except HTTPError as exc:
+        response_body = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"HTTP {exc.code} from Blaxel model: {response_body[:1000]}") from exc
+    return json.loads(response_body or b"{}")
 
 
 async def ask_code_coffee_docs(payload: dict[str, Any] | AskDocsRequest) -> AskDocsResponse:
