@@ -3,6 +3,7 @@ name = "ccp-drive-chat"
 version = "0.1.0"
 requires-python = "~=3.13.0"
 dependencies = [
+    "blaxel[openai]>=0.4.1",
     "dispatch-agents==0.14.4",
     "google-api-python-client>=2.178.0",
     "google-auth>=2.40.0",

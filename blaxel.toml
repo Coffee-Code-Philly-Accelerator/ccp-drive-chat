@@ -1,0 +1,28 @@
+name = "ccp-drive-chat"
+workspace = "coffee-code-philly"
+type = "agent"
+public = false
+models = ["sandbox-openai"]
+
+[runtime]
+generation = "mk3"
+memory = 1024
+
+[entrypoint]
+prod = ".venv/bin/python3 -m blaxel_app"
+dev = ".venv/bin/python3 -m blaxel_app"
+
+[env]
+BLAXEL_MODEL = "sandbox-openai"
+CCP_DOCS_MAX_FILES = "8"
+GOOGLE_DRIVE_FOLDER_ID = ""
+LOG_LEVEL = "INFO"
+
+[[triggers]]
+id = "default"
+type = "http"
+enabled = true
+
+[triggers.configuration]
+path = "/agents/ccp-drive-chat"
+authenticationType = "blaxel"

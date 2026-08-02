@@ -1,0 +1,16 @@
+.git/
+.gitnexus/
+.venv/
+__pycache__/
+__pycache__
+**/__pycache__
+.pytest_cache/
+.dispatch/
+.codex/
+.claude/
+.env
+.env.*
+!.env.example
+*.pyc
+**/*.pyc
+tests/
