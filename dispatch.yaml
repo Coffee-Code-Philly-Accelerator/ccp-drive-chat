@@ -4,11 +4,14 @@ entrypoint: agent.py
 base_image: python:3.13-slim
 system_packages: []
 env:
-  GOOGLE_DRIVE_FOLDER_ID: ''
+  COMPOSIO_CACHE_DIR: /tmp/.composio
+  COMPOSIO_USER_ID: pg-test-b0d3cc86-1df2-44b9-8d89-447c98bc0321
+  GOOGLE_DRIVE_FOLDER_ID: 18sNq6U8ZXwUFPoS93MhZ9q8pgtQGBp69
+  GOOGLEDRIVE_CONNECTED_ACCOUNT_ID: ca_fNcNyvq6RIaE
   CCP_DOCS_MAX_FILES: '8'
   LOG_LEVEL: INFO
 secrets:
-- name: GOOGLE_SERVICE_ACCOUNT_JSON
-  secret_id: /shared/google-drive-service-account-json
+- name: COMPOSIO_API_KEY
+  secret_id: /shared/composio-api-key
 llm_instrument: true
 log_level: INFO
